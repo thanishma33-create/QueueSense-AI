@@ -1,0 +1,70 @@
+# ==========================================
+# QueueSense AI — .gitignore
+# Combined React (Vite) & Python (FastAPI)
+# ==========================================
+
+# Dependencies (Node / Frontend)
+node_modules/
+.pnp
+.pnp.js
+
+# Build Outputs (Frontend)
+dist/
+dist-ssr/
+build/
+*.local
+
+# Environment Variables & Secrets (Keep .env.example tracked)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# SQLite Database (Local Runtime Data - generate via seed.py)
+backend/*.db
+backend/*.sqlite3
+*.db
+*.sqlite3
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Editor & OS Files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+backend/app.log
+*.log
