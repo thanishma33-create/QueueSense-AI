@@ -21,6 +21,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import Button from '../ui/Button';
+import { API_BASE_URL, WS_BASE_URL } from '../../services/api';
 
 export default function Navbar({ onOpenMobileMenu }) {
   const { currentUser, switchRole, availableRoles } = useAuth();
@@ -95,12 +96,12 @@ export default function Navbar({ onOpenMobileMenu }) {
           {/* Connection Status Badge */}
           {backendAvailable ? (
             isWsConnected ? (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-medium" title="Live WebSocket stream active on ws://localhost:8000/ws">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-medium" title={`Live WebSocket stream active on ${WS_BASE_URL}`}>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="hidden lg:inline">Live WebSockets</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/60 text-sky-800 dark:text-sky-300 text-xs font-medium" title="REST API Connected on http://localhost:8000">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/60 text-sky-800 dark:text-sky-300 text-xs font-medium" title={`REST API Connected on ${API_BASE_URL}`}>
                 <span className="w-2 h-2 rounded-full bg-sky-500" />
                 <span className="hidden lg:inline">REST Synced</span>
               </div>

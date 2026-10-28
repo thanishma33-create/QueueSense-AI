@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.department import Department
 from app.models.token import QueueToken
 from app.schemas.department import DepartmentResponse, DepartmentUpdate, CounterInfo
+from app.utils.logging_config import logger
 
 router = APIRouter(prefix="/departments", tags=["Departments"])
 
@@ -158,3 +159,22 @@ def update_department_config(
     db.commit()
     db.refresh(dept)
     return get_department_by_id(department_id, db)
+
+
+@router.api_route("/seed", methods=["GET", "POST"], response_model=List[DepartmentResponse])
+def seed_departments(db: Session = Depends(get_db)):
+    """Seed initial OPD departments if not already present."""
+    try:
+        import sys
+        import os
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if backend_dir not in sys.path:
+            sys.path.insert(0, backend_dir)
+        try:
+            from seed import seed_database
+        except ImportError:
+            from backend.seed import seed_database
+        seed_database()
+    except Exception as e:
+        logger.warning(f"Failed to seed departments: {e}")
+    return get_departments(db)

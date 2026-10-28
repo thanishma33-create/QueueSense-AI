@@ -224,3 +224,19 @@ The React + Vite frontend communicates with this backend seamlessly:
    ```bash
    npm run dev
    ```
+
+---
+
+## ☁️ Live Cloud Deployment (Render)
+
+| Target | URL | Status |
+|---|---|---|
+| **Live API Documentation** | [https://queuesense-ai-rx39.onrender.com/docs](https://queuesense-ai-rx39.onrender.com/docs) | Active |
+| **Health Check Endpoint** | [https://queuesense-ai-rx39.onrender.com/health](https://queuesense-ai-rx39.onrender.com/health) | Active |
+| **Connected Frontend** | [https://queuesense-ai-1.onrender.com](https://queuesense-ai-1.onrender.com) | Active |
+
+### Render Deployment Settings:
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Automatic Seed:** Tables and demo users/departments auto-populate on startup via FastAPI `lifespan`.
+- **Manual Seed Endpoint:** `POST /api/departments/seed` (or `GET /api/departments/seed`).

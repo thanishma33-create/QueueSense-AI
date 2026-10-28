@@ -20,14 +20,88 @@ import {
 
 import { calculateWaitingTimeEstimate } from './estimationEngine';
 
-// Resolve Base URL (e.g. http://localhost:8000/api)
-const RAW_API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Resolve Base URL (defaults to development http://localhost:8000 if VITE_API_BASE_URL is omitted)
+const RAW_API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').trim();
 export const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '').endsWith('/api')
   ? RAW_API_URL.replace(/\/+$/, '')
   : `${RAW_API_URL.replace(/\/+$/, '')}/api`;
 
-export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 
-  RAW_API_URL.replace(/^http/, 'ws').replace(/\/+$/, '') + '/ws';
+const resolveWsBaseUrl = () => {
+  let wsUrl = (import.meta.env.VITE_WS_BASE_URL || '').trim();
+  if (!wsUrl) {
+    wsUrl = RAW_API_URL.startsWith('https://')
+      ? RAW_API_URL.replace(/^https:\/\//i, 'wss://')
+      : RAW_API_URL.replace(/^http:\/\//i, 'ws://');
+  }
+  wsUrl = wsUrl.replace(/\/+$/, '');
+  if (!wsUrl.endsWith('/ws')) {
+    wsUrl = `${wsUrl}/ws`;
+  }
+  return wsUrl;
+};
+
+export const WS_BASE_URL = resolveWsBaseUrl();
+
+/**
+ * Universal Department ID Resolver
+ * Maps numbers, numeric strings, or department codes/names ('GM', 'gen-med', 'PED', etc.)
+ * directly to a valid integer database department ID.
+ */
+export function resolveDepartmentId(rawDept, departmentsList = []) {
+  if (rawDept === undefined || rawDept === null) return 1;
+
+  // 1. If already a valid positive integer number
+  if (typeof rawDept === 'number' && Number.isInteger(rawDept) && rawDept > 0) {
+    return rawDept;
+  }
+
+  const str = String(rawDept).trim();
+
+  // 2. If string contains digits only
+  if (/^\d+$/.test(str)) {
+    const parsed = parseInt(str, 10);
+    if (parsed > 0) return parsed;
+  }
+
+  // 3. Look up in active departments list
+  if (Array.isArray(departmentsList) && departmentsList.length > 0) {
+    const match = departmentsList.find(d => 
+      (d.id && String(d.id).toLowerCase() === str.toLowerCase()) ||
+      (d.code && d.code.toLowerCase() === str.toLowerCase()) ||
+      (d.name && d.name.toLowerCase() === str.toLowerCase()) ||
+      (d.numericId && String(d.numericId) === str)
+    );
+    if (match) {
+      const matchId = parseInt(match.numericId || match.id, 10);
+      if (matchId > 0) return matchId;
+    }
+  }
+
+  // 4. Standard OPD Specialty Map
+  const staticMap = {
+    'gm': 1,
+    'gen-med': 1,
+    'general medicine': 1,
+    'ped': 2,
+    'pediatrics': 2,
+    'ortho': 3,
+    'orthopedics': 3,
+    'ent': 4,
+    'eye': 5,
+    'ophthalmology': 5,
+    'gyn': 6,
+    'gynecology': 6,
+    'cardio': 1,
+    'opd': 1,
+  };
+
+  const normalized = str.toLowerCase();
+  if (staticMap[normalized]) {
+    return staticMap[normalized];
+  }
+
+  return 1;
+}
 
 export const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
@@ -189,9 +263,13 @@ function normalizeStatusToBackend(frontendStatus) {
 // Department Data Adapter
 function adaptDepartment(dept) {
   if (!dept) return null;
+  const numId = typeof dept.id === 'number'
+    ? dept.id
+    : (parseInt(dept.id, 10) || (dept.code === 'GM' ? 1 : dept.code === 'PED' ? 2 : dept.code === 'ORTHO' ? 3 : dept.code === 'ENT' ? 4 : dept.code === 'EYE' ? 5 : dept.code === 'GYN' ? 6 : 1));
+
   return {
-    id: dept.id,
-    numericId: dept.id,
+    id: numId,
+    numericId: numId,
     name: dept.name,
     code: dept.code,
     malayalamName: dept.malayalam_name || dept.malayalamName || dept.name,
@@ -231,11 +309,24 @@ function adaptToken(token) {
     accNeeds = token.accessibilityNeeds;
   }
 
+  const deptCode = token.department_code || token.departmentCode || '';
+  const numDeptId = typeof token.department_id === 'number'
+    ? token.department_id
+    : (typeof token.departmentId === 'number'
+        ? token.departmentId
+        : (deptCode === 'GM' || token.token_number?.startsWith('GM') || token.tokenNumber?.startsWith('GM') ? 1
+           : deptCode === 'PED' || token.token_number?.startsWith('PED') || token.tokenNumber?.startsWith('PED') ? 2
+           : deptCode === 'ORTHO' || token.token_number?.startsWith('ORTHO') || token.tokenNumber?.startsWith('ORTHO') ? 3
+           : deptCode === 'ENT' || token.token_number?.startsWith('ENT') || token.tokenNumber?.startsWith('ENT') ? 4
+           : deptCode === 'EYE' || token.token_number?.startsWith('EYE') || token.tokenNumber?.startsWith('EYE') ? 5
+           : deptCode === 'GYN' || token.token_number?.startsWith('GYN') || token.tokenNumber?.startsWith('GYN') ? 6
+           : (parseInt(token.department_id || token.departmentId, 10) || 1)));
+
   return {
     id: token.id,
     tokenNumber: token.token_number || token.tokenNumber || `T-${token.id}`,
     patientId: token.patient_id || token.patientId,
-    departmentId: token.department_id || token.departmentId,
+    departmentId: numDeptId,
     departmentName: token.department_name || token.departmentName || 'General Medicine',
     departmentCode: token.department_code || token.departmentCode || 'GM',
     status: normalizeStatusToFrontend(token.status),
@@ -264,11 +355,24 @@ function adaptToken(token) {
 // Priority Flag Data Adapter
 function adaptPriorityFlag(flag) {
   if (!flag) return null;
+  const flagDeptCode = flag.department_code || flag.departmentCode || '';
+  const numDeptId = typeof flag.department_id === 'number'
+    ? flag.department_id
+    : (typeof flag.departmentId === 'number'
+        ? flag.departmentId
+        : (flagDeptCode === 'GM' || flag.token_number?.startsWith('GM') || flag.tokenNumber?.startsWith('GM') ? 1
+           : flagDeptCode === 'PED' || flag.token_number?.startsWith('PED') || flag.tokenNumber?.startsWith('PED') ? 2
+           : flagDeptCode === 'ORTHO' || flag.token_number?.startsWith('ORTHO') || flag.tokenNumber?.startsWith('ORTHO') ? 3
+           : flagDeptCode === 'ENT' || flag.token_number?.startsWith('ENT') || flag.tokenNumber?.startsWith('ENT') ? 4
+           : flagDeptCode === 'EYE' || flag.token_number?.startsWith('EYE') || flag.tokenNumber?.startsWith('EYE') ? 5
+           : flagDeptCode === 'GYN' || flag.token_number?.startsWith('GYN') || flag.tokenNumber?.startsWith('GYN') ? 6
+           : (parseInt(flag.department_id || flag.departmentId, 10) || 1)));
+
   return {
     id: flag.id,
     tokenId: flag.token_id || flag.tokenId,
     tokenNumber: flag.token_number || flag.tokenNumber,
-    departmentId: flag.department_id || flag.departmentId,
+    departmentId: numDeptId,
     departmentName: flag.department_name || flag.departmentName || 'General Medicine',
     patientRef: flag.patient_ref || flag.patientRef,
     ageGroup: flag.age_group || flag.ageGroup || 'Adult (18-59)',
@@ -600,16 +704,9 @@ export const apiService = {
 
   // 4. Patients: Register
   async registerPatient(payload) {
-    // Convert department ID to integer if needed
-    let deptId = payload.department_id || payload.departmentId;
-    if (typeof deptId === 'string' && !/^\d+$/.test(deptId)) {
-      // Map code to numeric id
-      const depts = await this.getDepartments();
-      const match = depts.find(d => d.code?.toLowerCase() === deptId.toLowerCase() || d.id === deptId);
-      deptId = match ? match.numericId : 1;
-    } else {
-      deptId = parseInt(deptId, 10) || 1;
-    }
+    const rawDept = payload.department_id ?? payload.departmentId;
+    const depts = await this.getDepartments();
+    const deptId = resolveDepartmentId(rawDept, depts);
 
     const backendPayload = {
       department_id: deptId,
@@ -642,8 +739,8 @@ export const apiService = {
     // LocalStorage fallback
     initLocalStorageIfEmpty();
     const tokens = loadStorage(STORAGE_KEYS.TOKENS, INITIAL_TOKENS);
-    const depts = loadStorage(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-    const targetDept = depts.find(d => d.id === deptId) || depts[0];
+    const localDepts = loadStorage(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+    const targetDept = localDepts.find(d => d.id === deptId) || localDepts[0];
 
     const deptTokens = tokens.filter(t => t.departmentId === targetDept.id);
     const nextNum = deptTokens.length + 101;
@@ -700,14 +797,8 @@ export const apiService = {
 
   // 5. Queue: Call Next Patient
   async callNextToken(departmentId, counterNumber = 1, staffName = 'Doctor / Counter Staff') {
-    let deptId = departmentId;
-    if (typeof deptId === 'string' && !/^\d+$/.test(deptId)) {
-      const depts = await this.getDepartments();
-      const match = depts.find(d => d.code?.toLowerCase() === deptId.toLowerCase() || d.id === deptId);
-      deptId = match ? match.numericId : 1;
-    } else {
-      deptId = parseInt(deptId, 10) || 1;
-    }
+    const depts = await this.getDepartments();
+    const deptId = resolveDepartmentId(departmentId, depts);
 
     if (!IS_DEMO_MODE) {
       try {

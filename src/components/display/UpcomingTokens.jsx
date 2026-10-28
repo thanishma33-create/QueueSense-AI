@@ -3,7 +3,7 @@ import { Clock, ArrowRight, CheckCircle2, Sparkles, User } from 'lucide-react';
 import Badge from '../ui/Badge';
 
 export default function UpcomingTokens({ tokens = [], avgServiceMinutes = 8 }) {
-  const waitingTokens = tokens.filter(t => t.status === 'Waiting').slice(0, 5);
+  const waitingTokens = tokens.filter(t => t.status === 'Waiting' || t.rawStatus === 'WAITING').slice(0, 5);
 
   return (
     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 flex flex-col justify-between text-white">

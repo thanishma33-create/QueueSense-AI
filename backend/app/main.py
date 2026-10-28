@@ -27,6 +27,20 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing QueueSense AI database tables...")
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables initialized successfully.")
+    try:
+        import sys
+        import os
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if backend_dir not in sys.path:
+            sys.path.insert(0, backend_dir)
+        try:
+            from seed import seed_database
+        except ImportError:
+            from backend.seed import seed_database
+        seed_database()
+        logger.info("Database verification and auto-seed completed.")
+    except Exception as e:
+        logger.warning(f"Database auto-seed check: {e}")
     yield
     logger.info("QueueSense AI Backend shutting down...")
 
@@ -50,6 +64,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS or ["*"],
+    allow_origin_regex=r"https://.*\.onrender\.com|https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -109,6 +124,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Root Health & Welcome Endpoint
 @app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"])
+@app.get("/api/health", tags=["Health"])
 def root():
     return {
         "project": settings.PROJECT_NAME,

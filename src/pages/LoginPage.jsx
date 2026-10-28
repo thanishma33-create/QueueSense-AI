@@ -244,7 +244,7 @@ export default function LoginPage() {
                 FastAPI JWT Authentication
               </h4>
               <p className="text-xs text-slate-400">
-                Connects directly to <code className="text-brand-300 font-mono">POST /api/auth/login</code> on localhost:8000
+                Connects directly to <code className="text-brand-300 font-mono">POST /api/auth/login</code> on FastAPI backend
               </p>
             </div>
 

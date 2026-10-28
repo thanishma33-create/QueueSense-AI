@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import TokenSlipModal from '../components/patient/TokenSlipModal';
 import { useQueue } from '../context/QueueContext';
 import { useAuth } from '../context/AuthContext';
+import { resolveDepartmentId } from '../services/api';
 import {
   UserPlus,
   Building,
@@ -54,8 +55,11 @@ export default function RegistrationPage() {
       const generatedName = anonymizedName.trim() || `Patient #${Math.floor(100 + Math.random() * 900)}`;
       const generatedRef = patientRef.trim() || `REF-${Math.floor(1000 + Math.random() * 9000)} (${ageGroup.split(' ')[0]})`;
 
+      const validDeptId = resolveDepartmentId(departmentId, departments);
+
       const payload = {
-        departmentId,
+        departmentId: validDeptId,
+        department_id: validDeptId,
         patientRef: generatedRef,
         anonymizedName: generatedName,
         ageGroup,

@@ -32,16 +32,38 @@ export default function PatientDisplayPage() {
     return () => clearInterval(interval);
   }, [selectedDeptId, departments, settings.tvDisplayRotateIntervalSec]);
 
-  const currentDept = selectedDeptId === 'all'
-    ? (departments[activeDeptIndex] || departments[0] || { id: 'gen-med', name: 'General Medicine', code: 'GM' })
-    : (departments.find(d => d.id === selectedDeptId) || departments[0]);
+  // When a token is called across the hospital, immediately focus that department on the TV screen
+  useEffect(() => {
+    if (latestCalledToken && selectedDeptId === 'all' && departments.length > 0) {
+      const matchIndex = departments.findIndex(
+        (d) =>
+          String(d.id) === String(latestCalledToken.departmentId) ||
+          (d.code && latestCalledToken.departmentCode && d.code.toUpperCase() === latestCalledToken.departmentCode.toUpperCase())
+      );
+      if (matchIndex !== -1) {
+        setActiveDeptIndex(matchIndex);
+      }
+    }
+  }, [latestCalledToken, selectedDeptId, departments]);
 
-  const deptTokens = tokens.filter(t => t.departmentId === currentDept.id);
+  const currentDept = selectedDeptId === 'all'
+    ? (departments[activeDeptIndex] || departments[0] || { id: 1, name: 'General Medicine', code: 'GM', malayalamName: 'ജനറൽ മെഡിസിൻ', avgServiceTimeMinutes: 7.5 })
+    : (departments.find(d => String(d.id) === String(selectedDeptId) || d.id === selectedDeptId || d.code === selectedDeptId) || departments[0] || { id: 1, name: 'General Medicine', code: 'GM', malayalamName: 'ജനറൽ മെഡിസിൻ', avgServiceTimeMinutes: 7.5 });
+
+  const deptTokens = tokens.filter(t => currentDept && (
+    t.departmentId === currentDept.id ||
+    String(t.departmentId) === String(currentDept.id) ||
+    (t.departmentCode && currentDept.code && t.departmentCode.toUpperCase() === currentDept.code.toUpperCase())
+  ));
   
-  // Find current active token (Called or In Service)
-  const currentlyServingToken = deptTokens.find(t => t.status === 'Called') ||
-                                deptTokens.find(t => t.status === 'In Service') ||
-                                latestCalledToken;
+  // Find current active token (Called or In Service or newly called token)
+  const currentlyServingToken = 
+    deptTokens.find(t => t.status === 'Called' || t.rawStatus === 'CALLED') ||
+    deptTokens.find(t => t.status === 'In Service' || t.rawStatus === 'IN_SERVICE') ||
+    (latestCalledToken && currentDept && (
+      String(latestCalledToken.departmentId) === String(currentDept.id) ||
+      (latestCalledToken.departmentCode && currentDept.code && latestCalledToken.departmentCode.toUpperCase() === currentDept.code.toUpperCase())
+    ) ? latestCalledToken : null);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -61,7 +83,7 @@ export default function PatientDisplayPage() {
     if (currentlyServingToken && !isMuted) {
       announceToken({
         tokenNumber: currentlyServingToken.tokenNumber,
-        counterNumber: 1,
+        counterNumber: currentlyServingToken.counterNumber || 1,
         departmentName: currentDept.name,
         language: settings.defaultLanguage,
         rate: settings.speechRate,
@@ -125,7 +147,7 @@ export default function PatientDisplayPage() {
           <div className="lg:col-span-2">
             <ServingTokenCard
               token={currentlyServingToken}
-              counterNumber={1}
+              counterNumber={currentlyServingToken?.counterNumber || 1}
               department={currentDept}
               onRepeatVoice={handleRepeatVoice}
               isSpeaking={isSpeaking}

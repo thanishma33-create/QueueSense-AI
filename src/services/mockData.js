@@ -2,7 +2,8 @@
 
 export const INITIAL_DEPARTMENTS = [
   {
-    id: 'gen-med',
+    id: 1,
+    numericId: 1,
     code: 'GM',
     name: 'General Medicine',
     malayalamName: 'ജനറൽ മെഡിസിൻ',
@@ -19,7 +20,8 @@ export const INITIAL_DEPARTMENTS = [
     ]
   },
   {
-    id: 'pediatrics',
+    id: 2,
+    numericId: 2,
     code: 'PED',
     name: 'Pediatrics',
     malayalamName: 'ശിശുരോഗ വിഭാഗം',
@@ -35,7 +37,8 @@ export const INITIAL_DEPARTMENTS = [
     ]
   },
   {
-    id: 'orthopedics',
+    id: 3,
+    numericId: 3,
     code: 'ORTHO',
     name: 'Orthopedics',
     malayalamName: 'അസ്ഥിരോഗ വിഭാഗം',
@@ -50,7 +53,8 @@ export const INITIAL_DEPARTMENTS = [
     ]
   },
   {
-    id: 'ent',
+    id: 4,
+    numericId: 4,
     code: 'ENT',
     name: 'ENT (Ear, Nose, Throat)',
     malayalamName: 'ഇ എൻ ടി വിഭാഗം',
@@ -65,7 +69,8 @@ export const INITIAL_DEPARTMENTS = [
     ]
   },
   {
-    id: 'ophthalmology',
+    id: 5,
+    numericId: 5,
     code: 'EYE',
     name: 'Ophthalmology',
     malayalamName: 'നേത്രരോഗ വിഭാഗം',
@@ -80,7 +85,8 @@ export const INITIAL_DEPARTMENTS = [
     ]
   },
   {
-    id: 'gynecology',
+    id: 6,
+    numericId: 6,
     code: 'GYN',
     name: 'Gynecology & Obstetrics',
     malayalamName: 'സ്ത്രീരോഗ വിഭാഗം',
